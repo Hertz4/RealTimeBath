@@ -3,10 +3,10 @@
 `realtimebath` fits a sampled scalar real-time bath correlation with a
 finite, physical set of coupled Lindblad pseudomodes:
 
-\[
+$$
 C(t) \approx g^\dagger \exp[(-iH-D)t]g,
 \qquad H=H^\dagger,\quad D\succeq0.
-\]
+$$
 
 The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
@@ -144,20 +144,20 @@ with implicit conventions or interpolation.
 reproducible benchmark of the refined SDP route. It fits the full semicircle
 transform
 
-\[
+$$
 J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
 \Delta(t)=\Gamma\frac{J_1(Wt)}{t},
-\]
+$$
 
 with the continuous value `Delta(0) = Gamma*W/2`, using `W=10`, `Gamma=1`,
 and also fits the unit-normalized half-semicircle and box densities supported
 on `0 <= omega <= 1`. All fits use `t` in `[0, 10]` and scan requested mode
 budgets `N=1,...,15`. The notebook reports
 
-\[
+$$
 \epsilon_1=\frac{\int_0^{10}|\Delta_{\rm fit}(t)-\Delta(t)|dt}
 {\int_0^{10}|\Delta(t)|dt}.
-\]
+$$
 
 It contains the fitted real and imaginary parts at `N=6`, pointwise absolute
 errors at `N=6` and `N=12`, normalized L1 error versus mode budget, and timing
