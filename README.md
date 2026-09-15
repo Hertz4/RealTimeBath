@@ -26,35 +26,6 @@ fit = fit_correlation(t, correlation, n_modes=6)
 Pass `optimize=True` to apply the optional physical time-domain refinement
 after the SDP projection.
 
-## Advanced and experimental routes
-
-The following methods are retained for research, controlled inputs, and paper
-reproduction. They are not recommended as default fitting routes:
-
-- `method="auto"` first attempts the fragile exact physical construction and
-  falls back to SDP. Prefer explicit `method="sdp"` for predictable behavior.
-- `method="physical"` implements the exact spectral-factor and
-  Ornstein--Uhlenbeck construction of Müller and Strunz,
-  [arXiv:2604.06466](https://arxiv.org/abs/2604.06466). Reserve it for
-  exponential fits already known to possess a well-conditioned, strictly
-  positive rational spectrum.
-- `method="positive"` is an experimental optimizer for the same paper's
-  rank-one positive-exponential ansatz (Eq. 11). A positive-exponential
-  representation is appropriate only when one is already known; obtaining it
-  a priori is itself nontrivial. When its rates and positive Gram factor are
-  known, prefer the lower-level `realize_positive_gram` interface.
-
-> **Warning:** Do not select `method="physical"` directly for generic noisy or
-> numerically fitted samples. Its exact polynomial spectral factorization
-> requires reliable root pairing and strict spectral positivity; small fitting
-> errors, nearly vanishing spectral density, or higher model order can make the
-> factorization fail or become ill-conditioned. Use `method="auto"` to retain
-> the SDP fallback, or select `method="sdp"` explicitly.
-
-> **Warning:** Do not select `method="positive"` merely from sampled
-> `Delta(t)`. Use it only when a valid positive-exponential representation is
-> already available; constructing that representation a priori is nontrivial.
-
 ## Installation
 
 ```bash
@@ -181,8 +152,7 @@ J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
 with the continuous value `Delta(0) = Gamma*W/2`, using `W=10`, `Gamma=1`,
 and also fits the unit-normalized half-semicircle and box densities supported
 on `0 <= omega <= 1`. All fits use `t` in `[0, 10]` and scan requested mode
-budgets `N=1,...,15`. The positive-exponential route is deliberately excluded;
-the notebook reports
+budgets `N=1,...,15`. The notebook reports
 
 \[
 \epsilon_1=\frac{\int_0^{10}|\Delta_{\rm fit}(t)-\Delta(t)|dt}
@@ -209,6 +179,34 @@ Run the unit tests and small deterministic realization comparison with:
 pytest
 python benchmarks/compare_routes.py
 ```
+
+## Unsupported research interfaces — do not use
+
+> **Do not use `method="physical"` or `method="positive"` to fit sampled
+> real-time data.** They remain exposed only for controlled research cases and
+> reproduction of [arXiv:2604.06466](https://arxiv.org/abs/2604.06466). They
+> are not supported alternatives to the default fitter.
+
+### `method="physical"` — do not use for numerical fits
+
+This route performs exact polynomial spectral factorization. It assumes the
+input exponential fit already has a well-conditioned, strictly positive
+rational spectrum. Noise, small fitting errors, nearly vanishing spectral
+density, and higher model order can make root pairing fail or produce an
+ill-conditioned realization. It is retained only for analytically controlled
+exponential inputs.
+
+### `method="positive"` — do not use without a known representation
+
+This experimental route assumes that a valid positive-exponential
+representation is already available. Obtaining that representation a priori is
+itself a nontrivial problem, so this is not a general fitting procedure for
+sampled `Delta(t)`. If the rates and positive Gram factor are already known,
+use the lower-level `realize_positive_gram` interface instead.
+
+`method="auto"` is also retained only for compatibility and research. Because
+it may attempt the unsupported exact physical route before falling back, new
+code should use the default fitter rather than selecting `"auto"`.
 
 ## License
 
