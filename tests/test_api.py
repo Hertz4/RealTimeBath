@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from scipy.integrate import trapezoid
 
 from realtimebath import BandLimitWarning, fit_correlation, fit_fermionic
 from realtimebath.route_sdp import cvxpy_available
@@ -114,8 +115,8 @@ def test_semicircular_finite_temperature_hybridization():
     fermi = 1.0 / (1.0 + np.exp(3.0 * omega))
     times = np.linspace(0.0, 8.0, 161)
     phase = np.exp(-1j * np.outer(times, omega))
-    lesser = np.trapezoid(phase * (spectral_density * fermi)[None, :], omega, axis=1)
-    greater = np.trapezoid(
+    lesser = trapezoid(phase * (spectral_density * fermi)[None, :], omega, axis=1)
+    greater = trapezoid(
         phase * (spectral_density * (1.0 - fermi))[None, :], omega, axis=1
     )
 

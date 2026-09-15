@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy.integrate import trapezoid
 from scipy.optimize import least_squares
 
 from .exceptions import RealizationError
@@ -167,13 +168,13 @@ def optimize_full_positive_exponentials(
     )
     initial_prediction = initial.model.evaluate(times)
     l1_normalization = max(
-        float(np.trapezoid(np.abs(target), times)), np.finfo(float).tiny
+        float(trapezoid(np.abs(target), times)), np.finfo(float).tiny
     )
     initial_l1 = float(
-        np.trapezoid(np.abs(initial_prediction - target), times) / l1_normalization
+        trapezoid(np.abs(initial_prediction - target), times) / l1_normalization
     )
     fitted_l1 = float(
-        np.trapezoid(
+        trapezoid(
             np.abs(scaled_prediction * amplitude_scale - target), times
         )
         / l1_normalization

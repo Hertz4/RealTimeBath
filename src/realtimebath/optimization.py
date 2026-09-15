@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy.integrate import trapezoid
 from scipy.linalg import expm
 from scipy.optimize import least_squares
 
@@ -173,9 +174,15 @@ def optimize_after_sdp_full(
     normalization_l2 = max(float(np.linalg.norm(target)), np.finfo(float).tiny)
     initial_l2 = float(np.linalg.norm(initial_full - target) / normalization_l2)
     optimized_l2 = float(np.linalg.norm(optimized_full - target) / normalization_l2)
-    normalization_l1 = max(float(np.trapezoid(np.abs(target), times)), np.finfo(float).tiny)
-    initial_l1 = float(np.trapezoid(np.abs(initial_full - target), times) / normalization_l1)
-    optimized_l1 = float(np.trapezoid(np.abs(optimized_full - target), times) / normalization_l1)
+    normalization_l1 = max(
+        float(trapezoid(np.abs(target), times)), np.finfo(float).tiny
+    )
+    initial_l1 = float(
+        trapezoid(np.abs(initial_full - target), times) / normalization_l1
+    )
+    optimized_l1 = float(
+        trapezoid(np.abs(optimized_full - target), times) / normalization_l1
+    )
     warnings = list(initial.warnings)
     if not solution.success:
         warnings.append(f"time-domain optimization stopped early: {solution.message}")

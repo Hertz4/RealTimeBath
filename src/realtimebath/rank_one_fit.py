@@ -6,6 +6,7 @@ from inspect import signature
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy.integrate import trapezoid
 from scipy.optimize import least_squares
 
 from .exceptions import RealizationError
@@ -241,7 +242,7 @@ def optimize_rank_one_exponentials(
     iteration = 0
     stopped_for_validation_stall = False
     validation_l1_norm = max(
-        float(np.trapezoid(np.abs(scaled_target), scaled_times)),
+        float(trapezoid(np.abs(scaled_target), scaled_times)),
         np.finfo(float).tiny,
     )
     validation_l2_norm = max(
@@ -286,7 +287,7 @@ def optimize_rank_one_exponentials(
             current_rates, current_residues, scaled_times
         )
         current_l1 = float(
-            np.trapezoid(
+            trapezoid(
                 np.abs(current_prediction - scaled_target), scaled_times
             )
             / validation_l1_norm
@@ -337,15 +338,15 @@ def optimize_rank_one_exponentials(
     initial_prediction = initial.model.evaluate(times)
     l2_normalization = max(float(np.linalg.norm(target)), np.finfo(float).tiny)
     l1_normalization = max(
-        float(np.trapezoid(np.abs(target), times)), np.finfo(float).tiny
+        float(trapezoid(np.abs(target), times)), np.finfo(float).tiny
     )
     initial_l2 = float(np.linalg.norm(initial_prediction - target) / l2_normalization)
     fitted_l2 = float(np.linalg.norm(prediction - target) / l2_normalization)
     initial_l1 = float(
-        np.trapezoid(np.abs(initial_prediction - target), times) / l1_normalization
+        trapezoid(np.abs(initial_prediction - target), times) / l1_normalization
     )
     fitted_l1 = float(
-        np.trapezoid(np.abs(prediction - target), times) / l1_normalization
+        trapezoid(np.abs(prediction - target), times) / l1_normalization
     )
     warnings = list(initial.warnings)
     use_initial = (

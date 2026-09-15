@@ -12,7 +12,7 @@ The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
 ambiguity between common forms of the Lindblad dissipator.
 
-The package implements two complementary constructions:
+The package implements three complementary constructions:
 
 - `method="sdp"`: the gauge/semidefinite physical projection of Huang, Park,
   Chan, and Lin, [arXiv:2506.10308](https://arxiv.org/abs/2506.10308).
@@ -142,9 +142,11 @@ Version 0.1 is intentionally scalar-first. Matrix-valued/multi-orbital
 hybridizations and irregular time grids are rejected rather than being handled
 with implicit conventions or interpolation.
 
-## Semicircle benchmark
+## Benchmark notebook
 
-`benchmarks/semicircle.py` fits the transform
+[`notebooks/bath_benchmarks.ipynb`](notebooks/bath_benchmarks.ipynb) is the
+reproducible comparison of the two fitted routes requested for release. It
+fits the full semicircle transform
 
 \[
 J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
@@ -152,43 +154,38 @@ J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
 \]
 
 with the continuous value `Delta(0) = Gamma*W/2`, using `W=10`, `Gamma=1`,
-and `t` in `[0, 10]`. It compares the refined SDP
-route with the positive-exponential route and reports
+and also fits the unit-normalized half-semicircle and box densities supported
+on `0 <= omega <= 1`. All fits use `t` in `[0, 10]` and scan requested mode
+budgets `N=1,...,15`. The notebook compares the refined SDP route with the
+positive-exponential route and reports
 
 \[
 \epsilon_1=\frac{\int_0^{10}|\Delta_{\rm fit}(t)-\Delta(t)|dt}
 {\int_0^{10}|\Delta(t)|dt}.
 \]
 
-The script writes PNG/PDF fit and timing figures plus the fit, error, and timing
-values as CSV files under `artifacts/`.
+It contains the fitted real and imaginary parts at `N=6`, pointwise absolute
+errors at `N=6` and `N=12`, normalized L1 error versus mode budget, and timing
+plots. The executed notebook includes all six figures and numerical output;
+it does not create a separate directory of generated artifacts. On the default
+grid, the one-sided targets reach the estimated data rank at seven modes, and
+the plots identify requested budgets above that as band-limited plateaus.
 
-Run the tests and deterministic route comparison with:
+To rerun the notebook from a source checkout:
+
+```bash
+python -m pip install -e '.[notebook]'
+jupyter lab notebooks/bath_benchmarks.ipynb
+```
+
+Run the unit tests and small deterministic realization comparison with:
 
 ```bash
 pytest
 python benchmarks/compare_routes.py
-python benchmarks/semicircle.py
 ```
 
-## One-sided finite-support benchmarks
+## License
 
-`benchmarks/finite_support.py` applies the same route, pointwise-error, L1,
-and timing comparison to two unit-normalized densities supported on
-`0 <= omega <= 1`:
-
-\[
-J_{\mathrm{half}}(\omega)=\frac{4}{\pi}\sqrt{1-\omega^2},
-\qquad
-J_{\mathrm{box}}(\omega)=1.
-\]
-
-Their analytic transforms are used so the reference data contain no numerical
-quadrature error. On the default `t in [0, 10]` grid, both Hankel matrices have
-numerical rank seven in double precision. The generated mode-budget plots show
-that rank-limited plateau explicitly and record both the requested budget and
-active mode count in their CSV files.
-
-```bash
-python benchmarks/finite_support.py
-```
+RealTimeBath is released under the GNU General Public License, version 3 only
+(`GPL-3.0-only`). See [`LICENSE`](LICENSE).
