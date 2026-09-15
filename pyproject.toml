@@ -11,16 +11,16 @@ license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
+    "cvxpy>=1.5",
     "numpy>=1.24",
     "scipy>=1.10",
 ]
 
 [project.optional-dependencies]
-sdp = ["cvxpy>=1.5"]
-mosek = ["cvxpy>=1.5", "Mosek>=11.2"]
+mosek = ["Mosek>=11.2"]
 plot = ["matplotlib>=3.9"]
-notebook = ["cvxpy>=1.5", "matplotlib>=3.9", "jupyterlab>=4"]
-test = ["pytest>=8", "cvxpy>=1.5"]
+notebook = ["matplotlib>=3.9", "jupyterlab>=4"]
+test = ["pytest>=8"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/realtimebath"]

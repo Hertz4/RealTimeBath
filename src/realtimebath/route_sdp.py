@@ -46,7 +46,8 @@ def realize_sdp(
         import cvxpy as cp
     except ImportError as error:
         raise OptionalDependencyError(
-            "the SDP backend requires CVXPY; install realtimebath[sdp]"
+            "the SDP backend requires CVXPY, which is a core RealTimeBath "
+            "dependency; reinstall the package with dependencies enabled"
         ) from error
 
     rates = np.asarray(exponential.rates, dtype=np.complex128)

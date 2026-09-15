@@ -98,7 +98,7 @@ def fit_correlation(
     max_modes: int = 12,
     eps: float | None = None,
     tolerance: float | None = None,
-    method: str = "auto",
+    method: str = "sdp",
     polish: bool = True,
     max_nfev: int = 2_000,
     solver: str | None = None,
@@ -119,15 +119,22 @@ def fit_correlation(
         ``n_modes``) to select the smallest model meeting that relative RMS
         target. ``tolerance`` remains available as a compatibility alias.
     method:
-        ``"physical"`` uses exact spectral factorization, ``"sdp"`` uses the
-        convex physical projection, and ``"auto"`` tries the exact route before
-        falling back to the SDP route. ``"positive"`` exposes an experimental
-        optimizer for the second paper's positive-Gram ansatz; do not use it as
-        a general route from sampled data. That construction is appropriate only
-        when a positive-exponential representation is already known, and finding
-        one a priori is nontrivial. If its rates and Gram factor are available,
-        prefer ``realize_positive_gram``. Setting ``optimize=True`` forces the SDP
-        path and performs a physical time-domain refinement.
+        ``"sdp"`` is the default and recommended route; it uses the convex
+        physical projection. ``"auto"`` tries exact spectral factorization
+        before falling back to SDP and is retained for advanced use. Do
+        not select ``"physical"`` directly for generic noisy or numerically
+        fitted samples: it requires strict spectral positivity and numerically
+        reliable polynomial-root pairing, which small fitting errors, nearly
+        vanishing spectra, and higher model order can undermine. Reserve it for
+        exponential fits known to have a well-conditioned positive rational
+        spectrum; otherwise use ``"auto"`` or ``"sdp"``. ``"positive"``
+        exposes an experimental optimizer for the second paper's positive-Gram
+        ansatz; do not use it as a general route from sampled data. That
+        construction is appropriate only when a positive-exponential
+        representation is already known, and finding one a priori is nontrivial.
+        If its rates and Gram factor are available, prefer
+        ``realize_positive_gram``. Setting ``optimize=True`` forces the SDP path
+        and performs a physical time-domain refinement.
     """
 
     if method not in {"auto", "physical", "positive", "sdp"}:
@@ -258,7 +265,8 @@ def fit_correlation(
         )
     raise OptionalDependencyError(
         "the exponential fit was not exactly physical and the SDP fallback is unavailable; "
-        "install realtimebath[sdp]. Exact-route error: " + str(physical_error)
+        "CVXPY is a required RealTimeBath dependency; reinstall the package with "
+        "dependencies enabled. Exact-route error: " + str(physical_error)
     )
 
 

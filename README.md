@@ -12,44 +12,62 @@ The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
 ambiguity between common forms of the Lindblad dissipator.
 
-The package implements two general-purpose constructions and one specialized,
-experimental construction:
+## Recommended route: SDP
 
-- `method="sdp"`: the gauge/semidefinite physical projection of Huang, Park,
-  Chan, and Lin, [arXiv:2506.10308](https://arxiv.org/abs/2506.10308).
-- `method="physical"`: the exact spectral-factor and Ornstein--Uhlenbeck
-  construction of Müller and Strunz,
-  [arXiv:2604.06466](https://arxiv.org/abs/2604.06466).
-- `method="positive"`: an experimental optimizer for the same paper's rank-one
-  positive-exponential ansatz (Eq. 11). Do not use this as a general-purpose
-  route from sampled real-time data. A positive-exponential representation is
-  appropriate only when such a representation is already known; obtaining it
+`method="sdp"` is the default and supported general-purpose fitting route. It
+implements the gauge/semidefinite physical projection of Huang, Park, Chan,
+and Lin, [arXiv:2506.10308](https://arxiv.org/abs/2506.10308). A normal call
+therefore needs no `method` argument:
+
+```python
+fit = fit_correlation(t, correlation, n_modes=6)
+```
+
+Pass `optimize=True` to apply the optional physical time-domain refinement
+after the SDP projection.
+
+## Advanced and experimental routes
+
+The following methods are retained for research, controlled inputs, and paper
+reproduction. They are not recommended as default fitting routes:
+
+- `method="auto"` first attempts the fragile exact physical construction and
+  falls back to SDP. Prefer explicit `method="sdp"` for predictable behavior.
+- `method="physical"` implements the exact spectral-factor and
+  Ornstein--Uhlenbeck construction of Müller and Strunz,
+  [arXiv:2604.06466](https://arxiv.org/abs/2604.06466). Reserve it for
+  exponential fits already known to possess a well-conditioned, strictly
+  positive rational spectrum.
+- `method="positive"` is an experimental optimizer for the same paper's
+  rank-one positive-exponential ansatz (Eq. 11). A positive-exponential
+  representation is appropriate only when one is already known; obtaining it
   a priori is itself nontrivial. When its rates and positive Gram factor are
   known, prefer the lower-level `realize_positive_gram` interface.
+
+> **Warning:** Do not select `method="physical"` directly for generic noisy or
+> numerically fitted samples. Its exact polynomial spectral factorization
+> requires reliable root pairing and strict spectral positivity; small fitting
+> errors, nearly vanishing spectral density, or higher model order can make the
+> factorization fail or become ill-conditioned. Use `method="auto"` to retain
+> the SDP fallback, or select `method="sdp"` explicitly.
 
 > **Warning:** Do not select `method="positive"` merely from sampled
 > `Delta(t)`. Use it only when a valid positive-exponential representation is
 > already available; constructing that representation a priori is nontrivial.
 
-`method="auto"` first uses the exact construction. If the fitted exponential
-correlation is not exactly physical or is ill-conditioned, it uses the SDP
-projection when CVXPY is installed. Passing `optimize=True` forces that SDP path
-and applies the optional physical time-domain refinement.
-
 ## Installation
 
 ```bash
 python -m pip install realtimebath
-python -m pip install 'realtimebath[sdp]'
 python -m pip install 'realtimebath[mosek]'  # optional; requires a MOSEK license
 ```
 
-For an editable source checkout, use `python -m pip install -e '.[sdp]'`.
+For an editable source checkout, use `python -m pip install -e .`.
 
-The base package requires NumPy and SciPy. CVXPY is only required by the SDP
-backend and by the automatic fallback for noisy or slightly unphysical fits.
-When available, the SDP backend prefers MOSEK, then CLARABEL, then SCS. A
-specific installed solver can be selected with the `solver` argument.
+The base package requires NumPy, SciPy, and CVXPY because SDP is the default.
+The backend prefers MOSEK when it is installed and licensed, then CLARABEL,
+then SCS. A specific installed solver can be selected with the `solver`
+argument.
 
 ## Scalar correlation
 

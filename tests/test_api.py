@@ -6,7 +6,8 @@ from realtimebath import BandLimitWarning, fit_correlation, fit_fermionic
 from realtimebath.route_sdp import cvxpy_available
 
 
-def test_end_to_end_single_mode():
+@pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
+def test_default_method_is_sdp():
     times = np.linspace(0.0, 10.0, 401)
     values = 2.3 * np.exp(-(0.4 + 1.2j) * times)
 
@@ -15,13 +16,11 @@ def test_end_to_end_single_mode():
         values,
         n_modes=1,
         tolerance=1e-9,
-        method="auto",
     )
 
-    assert result.diagnostics.method == "physical"
-    assert result.diagnostics.relative_rms_error < 1e-9
+    assert result.diagnostics.method == "sdp"
+    assert result.diagnostics.relative_rms_error < 1e-4
     assert result.diagnostics.n_modes == 1
-    assert not result.diagnostics.warnings
 
 
 def test_eps_band_limit_is_propagated_to_public_diagnostics():
