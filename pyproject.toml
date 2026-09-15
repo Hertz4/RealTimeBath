@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "RealTimeBath"
+version = "0.1.0"
+description = "Fit real-time bath correlations with physical coupled Lindblad pseudomodes"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+sdp = ["cvxpy>=1.5"]
+mosek = ["cvxpy>=1.5", "Mosek>=11.2"]
+plot = ["matplotlib>=3.9"]
+test = ["pytest>=8", "cvxpy>=1.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/realtimebath"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
