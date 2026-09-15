@@ -120,10 +120,14 @@ def fit_correlation(
         target. ``tolerance`` remains available as a compatibility alias.
     method:
         ``"physical"`` uses exact spectral factorization, ``"sdp"`` uses the
-        convex physical projection, ``"positive"`` optimizes the second paper's
-        positive-Gram ansatz, and ``"auto"`` tries the exact route before falling
-        back to the SDP route. Setting ``optimize=True`` forces the SDP path and
-        performs a physical time-domain refinement.
+        convex physical projection, and ``"auto"`` tries the exact route before
+        falling back to the SDP route. ``"positive"`` exposes an experimental
+        optimizer for the second paper's positive-Gram ansatz; do not use it as
+        a general route from sampled data. That construction is appropriate only
+        when a positive-exponential representation is already known, and finding
+        one a priori is nontrivial. If its rates and Gram factor are available,
+        prefer ``realize_positive_gram``. Setting ``optimize=True`` forces the SDP
+        path and performs a physical time-domain refinement.
     """
 
     if method not in {"auto", "physical", "positive", "sdp"}:

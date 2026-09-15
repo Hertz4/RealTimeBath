@@ -12,17 +12,24 @@ The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
 ambiguity between common forms of the Lindblad dissipator.
 
-The package implements three complementary constructions:
+The package implements two general-purpose constructions and one specialized,
+experimental construction:
 
 - `method="sdp"`: the gauge/semidefinite physical projection of Huang, Park,
   Chan, and Lin, [arXiv:2506.10308](https://arxiv.org/abs/2506.10308).
 - `method="physical"`: the exact spectral-factor and Ornstein--Uhlenbeck
   construction of Müller and Strunz,
   [arXiv:2604.06466](https://arxiv.org/abs/2604.06466).
-- `method="positive"`: the same paper's rank-one positive-exponential ansatz
-  (Eq. 11), optimized directly in the time domain with an analytic Jacobian. It
-  uses the SDP model as a robust seed when an exact spectral factor of the
-  unconstrained fit is unavailable.
+- `method="positive"`: an experimental optimizer for the same paper's rank-one
+  positive-exponential ansatz (Eq. 11). Do not use this as a general-purpose
+  route from sampled real-time data. A positive-exponential representation is
+  appropriate only when such a representation is already known; obtaining it
+  a priori is itself nontrivial. When its rates and positive Gram factor are
+  known, prefer the lower-level `realize_positive_gram` interface.
+
+> **Warning:** Do not select `method="positive"` merely from sampled
+> `Delta(t)`. Use it only when a valid positive-exponential representation is
+> already available; constructing that representation a priori is nontrivial.
 
 `method="auto"` first uses the exact construction. If the fitted exponential
 correlation is not exactly physical or is ill-conditioned, it uses the SDP
@@ -72,16 +79,16 @@ samples in rank-one physical exponential coordinates. Physicality is retained
 at every optimizer iteration. The refinement uses a vectorized analytic
 Jacobian, retains the dense trust-region solver for small models, switches to
 iterative trust-region solves when they become faster, and checks the full-grid
-error for sustained stalls. The nonlinear evaluation budget scales with the
-`4*n_modes - 1` fitted parameters while respecting
-`optimization_max_nfev` as a hard user cap:
+error for sustained stalls. `optimization_max_nfev` is passed directly to
+SciPy as the maximum number of nonlinear function evaluations; it is not
+silently reduced according to the number of fitted parameters:
 
 ```python
-effective_max_nfev = min(
-    optimization_max_nfev,
-    max(200, 40 * (4 * n_modes - 1)),
-)
+effective_max_nfev = optimization_max_nfev
 ```
+
+The validation-stall callback may still stop the optimization before this
+limit when the full-grid error no longer improves meaningfully.
 
 ```python
 fit = fit_correlation(
@@ -145,8 +152,8 @@ with implicit conventions or interpolation.
 ## Benchmark notebook
 
 [`notebooks/bath_benchmarks.ipynb`](notebooks/bath_benchmarks.ipynb) is the
-reproducible comparison of the two fitted routes requested for release. It
-fits the full semicircle transform
+reproducible benchmark of the refined SDP route. It fits the full semicircle
+transform
 
 \[
 J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
@@ -156,8 +163,8 @@ J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
 with the continuous value `Delta(0) = Gamma*W/2`, using `W=10`, `Gamma=1`,
 and also fits the unit-normalized half-semicircle and box densities supported
 on `0 <= omega <= 1`. All fits use `t` in `[0, 10]` and scan requested mode
-budgets `N=1,...,15`. The notebook compares the refined SDP route with the
-positive-exponential route and reports
+budgets `N=1,...,15`. The positive-exponential route is deliberately excluded;
+the notebook reports
 
 \[
 \epsilon_1=\frac{\int_0^{10}|\Delta_{\rm fit}(t)-\Delta(t)|dt}

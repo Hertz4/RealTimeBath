@@ -12,11 +12,10 @@ from realtimebath.rank_one_fit import (
 from realtimebath.route_physical import realize_positive_gram
 
 
-def test_parameter_scaled_evaluation_budget_respects_floor_and_user_cap():
-    assert _effective_max_nfev(1_000, 3) == 200
-    assert _effective_max_nfev(1_000, 7) == 280
-    assert _effective_max_nfev(1_000, 23) == 920
-    assert _effective_max_nfev(1_000, 27) == 1_000
+def test_evaluation_budget_honors_user_request():
+    assert _effective_max_nfev(1_000, 3) == 1_000
+    assert _effective_max_nfev(1_000, 23) == 1_000
+    assert _effective_max_nfev(2_000, 23) == 2_000
     assert _effective_max_nfev(80, 27) == 80
 
 

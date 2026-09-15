@@ -22,20 +22,16 @@ _EXACT_TR_SOLVER_MAX_MODES = 4
 _VALIDATION_CHECK_INTERVAL = 25
 _VALIDATION_STALL_CHECKS = 8
 _VALIDATION_MIN_RELATIVE_IMPROVEMENT = 1e-3
-_MIN_OPTIMIZATION_NFEV = 200
-_NFEV_PER_PARAMETER = 40
 _LEAST_SQUARES_SUPPORTS_CALLBACK = "callback" in signature(
     least_squares
 ).parameters
 
 
 def _effective_max_nfev(requested_max_nfev: int, n_parameters: int) -> int:
-    """Return the parameter-scaled evaluation budget under the user cap."""
+    """Return the user-requested maximum number of evaluations."""
 
-    scaled_budget = max(
-        _MIN_OPTIMIZATION_NFEV, _NFEV_PER_PARAMETER * n_parameters
-    )
-    return min(requested_max_nfev, scaled_budget)
+    del n_parameters  # Retained for diagnostic/API compatibility.
+    return requested_max_nfev
 
 
 def _evaluate_rank_one(
