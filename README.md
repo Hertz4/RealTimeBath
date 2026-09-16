@@ -5,6 +5,9 @@ finite, physical set of coupled Lindblad pseudomodes:
 
 `C(t) ≈ g† exp[(-iH - D)t] g`, with `H = H†` and `D ⪰ 0`.
 
+All coupled Lindblad bath fitting reported in the paper was performed with the
+`RealTimeBath` package.
+
 The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
 ambiguity between common forms of the Lindblad dissipator.
