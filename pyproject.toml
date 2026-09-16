@@ -5,11 +5,29 @@ build-backend = "hatchling.build"
 [project]
 name = "RealTimeBath"
 version = "0.1.0"
-description = "Fit real-time bath correlations with physical coupled Lindblad pseudomodes"
+description = "Fit real-time bath correlations with coupled Lindblad pseudomodes or complex exponential models"
+authors = [{name = "Zhen Huang"}]
+maintainers = [{name = "Zhen Huang"}]
 readme = "README.md"
 license = "GPL-3.0-only"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "COPYRIGHT"]
 requires-python = ">=3.10"
+keywords = [
+    "bath correlation functions",
+    "complex exponential fitting",
+    "hybridization functions",
+    "Lindblad dynamics",
+    "open quantum systems",
+    "pseudomodes",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = [
     "cvxpy>=1.5",
     "numpy>=1.24",
@@ -21,6 +39,11 @@ mosek = ["Mosek>=11.2"]
 plot = ["matplotlib>=3.9"]
 notebook = ["matplotlib>=3.9", "jupyterlab>=4"]
 test = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/Hertz4/RealTimeBath"
+Repository = "https://github.com/Hertz4/RealTimeBath.git"
+Issues = "https://github.com/Hertz4/RealTimeBath/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/realtimebath"]

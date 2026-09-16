@@ -6,6 +6,19 @@ from realtimebath import BandLimitWarning, fit_correlation, fit_fermionic
 from realtimebath.route_sdp import cvxpy_available
 
 
+def test_unsupported_research_helpers_are_not_top_level_exports():
+    import realtimebath
+
+    unsupported = {
+        "optimize_positive_exponentials",
+        "realize_physical",
+        "realize_positive_gram",
+    }
+
+    assert unsupported.isdisjoint(realtimebath.__all__)
+    assert all(not hasattr(realtimebath, name) for name in unsupported)
+
+
 @pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
 def test_default_method_is_sdp():
     times = np.linspace(0.0, 10.0, 401)

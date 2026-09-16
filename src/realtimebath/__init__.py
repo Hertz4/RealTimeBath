@@ -12,8 +12,6 @@ from .exceptions import (
 )
 from .exponential import fit_exponentials
 from .optimization import optimize_after_sdp
-from .positive_fit import optimize_positive_exponentials
-from .route_physical import realize_physical, realize_positive_gram
 from .route_sdp import cvxpy_available, realize_sdp
 from .types import (
     ExponentialFit,
@@ -41,8 +39,5 @@ __all__ = [
     "fit_exponentials",
     "fit_fermionic",
     "optimize_after_sdp",
-    "optimize_positive_exponentials",
-    "realize_physical",
-    "realize_positive_gram",
     "realize_sdp",
 ]

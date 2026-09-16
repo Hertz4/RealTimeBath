@@ -110,3 +110,68 @@ def test_sdp_route_projects_an_unphysical_fit():
     assert np.min(np.linalg.eigvalsh(result.model.damping)) > -1e-7
     assert result.conversion_residual > 1e-5
     assert result.warnings
+
+
+@pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
+def test_automatic_sdp_solver_falls_back_after_failure(monkeypatch):
+    import cvxpy as cp
+
+    original_solve = cp.Problem.solve
+    attempted = []
+
+    def fail_mosek_then_solve(self, *args, solver=None, **kwargs):
+        attempted.append(solver)
+        if solver == "MOSEK":
+            raise cp.error.SolverError("simulated missing MOSEK license")
+        return original_solve(self, *args, solver=solver, **kwargs)
+
+    monkeypatch.setattr(cp, "installed_solvers", lambda: ["MOSEK", "CLARABEL"])
+    monkeypatch.setattr(cp.Problem, "solve", fail_mosek_then_solve)
+
+    result = realize_sdp(make_physical_exponential())
+
+    assert attempted[:2] == ["MOSEK", "CLARABEL"]
+    assert result.details["solver"] == "CLARABEL"
+    assert result.details["solver_failed_attempts"]
+    assert any("fallback" in warning for warning in result.warnings)
+
+
+@pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
+def test_explicit_sdp_solver_failure_does_not_fallback(monkeypatch):
+    import cvxpy as cp
+
+    attempted = []
+
+    def fail_solver(self, *args, solver=None, **kwargs):
+        attempted.append(solver)
+        raise cp.error.SolverError("simulated explicit solver failure")
+
+    monkeypatch.setattr(cp.Problem, "solve", fail_solver)
+
+    with pytest.raises(RealizationError, match="simulated explicit solver failure"):
+        realize_sdp(make_physical_exponential(), solver="MOSEK")
+
+    assert attempted == ["MOSEK"]
+
+
+@pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
+def test_mosek_sdp_accuracy_when_available():
+    import cvxpy as cp
+
+    if "MOSEK" not in cp.installed_solvers():
+        pytest.skip("MOSEK is not installed")
+    exponential = ExponentialFit(
+        np.array([0.4 + 1.2j]),
+        np.array([2.3 + 0.0j]),
+        0.0,
+        0.0,
+    )
+
+    result = realize_sdp(exponential, solver="MOSEK")
+    times = np.linspace(0.0, 10.0, 401)
+    relative = np.linalg.norm(
+        result.model.evaluate(times) - exponential.evaluate(times)
+    ) / np.linalg.norm(exponential.evaluate(times))
+
+    assert relative < 1e-7
+    assert not result.warnings

@@ -3,10 +3,7 @@
 `realtimebath` fits a sampled scalar real-time bath correlation with a
 finite, physical set of coupled Lindblad pseudomodes:
 
-$$
-C(t) \approx g^\dagger \exp[(-iH-D)t]g,
-\qquad H=H^\dagger,\quad D\succeq0.
-$$
+`C(t) ≈ g† exp[(-iH - D)t] g`, with `H = H†` and `D ⪰ 0`.
 
 The jump-coefficient matrix returned by the package satisfies
 `jumps.conj().T @ jumps == 2*damping`. This convention removes a factor-of-two
@@ -37,8 +34,10 @@ For an editable source checkout, use `python -m pip install -e .`.
 
 The base package requires NumPy, SciPy, and CVXPY because SDP is the default.
 The backend prefers MOSEK when it is installed and licensed, then CLARABEL,
-then SCS. A specific installed solver can be selected with the `solver`
-argument.
+then SCS. Automatic selection uses tighter solver-specific tolerances and
+falls through to the next solver if one fails, for example because a MOSEK
+license is unavailable. Passing the `solver` argument disables fallback so an
+explicitly requested solver fails loudly.
 
 ## Scalar correlation
 
@@ -62,6 +61,24 @@ L = fit.model.jumps
 reconstructed = fit.evaluate(t)
 print(fit.diagnostics)
 ```
+
+### Complex exponential fit only
+
+The stable exponential representation is also available without constructing
+a Lindblad model:
+
+```python
+from realtimebath import fit_exponentials
+
+exponential = fit_exponentials(t, correlation, n_modes=6)
+rates = exponential.rates
+weights = exponential.weights
+reconstructed = exponential.evaluate(t)
+```
+
+This standalone fit constrains the exponential rates to decay but does not
+impose the positivity conditions needed for a physical Lindblad realization.
+Use `fit_correlation` when those physical constraints are required.
 
 The SDP construction can optionally be refined directly against the input
 samples in rank-one physical exponential coordinates. Physicality is retained
@@ -140,24 +157,17 @@ with implicit conventions or interpolation.
 
 ## Benchmark notebook
 
-[`notebooks/bath_benchmarks.ipynb`](notebooks/bath_benchmarks.ipynb) is the
-reproducible benchmark of the refined SDP route. It fits the full semicircle
-transform
+[`notebooks/bath_benchmarks.ipynb`](https://github.com/Hertz4/RealTimeBath/blob/main/notebooks/bath_benchmarks.ipynb)
+is the reproducible benchmark of the refined SDP route. It fits the full
+semicircle transform
 
-$$
-J(\omega)=\frac{\Gamma}{\pi}\sqrt{1-(\omega/W)^2},\qquad
-\Delta(t)=\Gamma\frac{J_1(Wt)}{t},
-$$
+`J(ω) = (Γ/π) sqrt(1 - (ω/W)²)` and `Δ(t) = Γ J₁(Wt)/t`,
 
 with the continuous value `Delta(0) = Gamma*W/2`, using `W=10`, `Gamma=1`,
 and also fits the unit-normalized half-semicircle and box densities supported
 on `0 <= omega <= 1`. All fits use `t` in `[0, 10]` and scan requested mode
-budgets `N=1,...,15`. The notebook reports
-
-$$
-\epsilon_1=\frac{\int_0^{10}|\Delta_{\rm fit}(t)-\Delta(t)|dt}
-{\int_0^{10}|\Delta(t)|dt}.
-$$
+budgets `N=1,...,15`. The notebook reports the normalized L1 error
+`ε₁ = ∫₀¹⁰ |Δfit(t) - Δ(t)| dt / ∫₀¹⁰ |Δ(t)| dt`.
 
 It contains the fitted real and imaginary parts at `N=6`, pointwise absolute
 errors at `N=6` and `N=12`, normalized L1 error versus mode budget, and timing
@@ -173,19 +183,19 @@ python -m pip install -e '.[notebook]'
 jupyter lab notebooks/bath_benchmarks.ipynb
 ```
 
-Run the unit tests and small deterministic realization comparison with:
+Run the unit tests with:
 
 ```bash
 pytest
-python benchmarks/compare_routes.py
 ```
 
 ## Unsupported research interfaces — do not use
 
 > **Do not use `method="physical"` or `method="positive"` to fit sampled
-> real-time data.** They remain exposed only for controlled research cases and
-> reproduction of [arXiv:2604.06466](https://arxiv.org/abs/2604.06466). They
-> are not supported alternatives to the default fitter.
+> real-time data.** Their implementations are retained only as non-public
+> research details for controlled cases and reproduction of
+> [arXiv:2604.06466](https://arxiv.org/abs/2604.06466). They are not supported
+> alternatives to the default fitter.
 
 ### `method="physical"` — do not use for numerical fits
 
@@ -201,8 +211,7 @@ exponential inputs.
 This experimental route assumes that a valid positive-exponential
 representation is already available. Obtaining that representation a priori is
 itself a nontrivial problem, so this is not a general fitting procedure for
-sampled `Delta(t)`. If the rates and positive Gram factor are already known,
-use the lower-level `realize_positive_gram` interface instead.
+sampled `Delta(t)`.
 
 `method="auto"` is also retained only for compatibility and research. Because
 it may attempt the unsupported exact physical route before falling back, new
@@ -211,4 +220,6 @@ code should use the default fitter rather than selecting `"auto"`.
 ## License
 
 RealTimeBath is released under the GNU General Public License, version 3 only
-(`GPL-3.0-only`). See [`LICENSE`](LICENSE).
+(`GPL-3.0-only`). See
+[`LICENSE`](https://github.com/Hertz4/RealTimeBath/blob/main/LICENSE).
+Copyright © 2026 Zhen Huang.

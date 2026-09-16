@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import warnings as py_warnings
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
 from .exceptions import OptionalDependencyError, RealizationError
 from .realization import BackendResult
 from .types import ExponentialFit, LindbladModel
+
+
+_DEFAULT_SOLVER_ORDER = ("MOSEK", "CLARABEL", "SCS")
+
+
+@dataclass(frozen=True)
+class _SolverResult:
+    solver: str
+    status: str
+    objective: float
+    gauge: np.ndarray
+    failed_attempts: tuple[str, ...]
 
 
 def cvxpy_available() -> bool:
@@ -26,6 +40,109 @@ def _balanced_quasi_couplings(weights: np.ndarray) -> tuple[np.ndarray, np.ndarr
     right = roots * np.exp(0.5j * phases)
     left = roots * np.exp(-0.5j * phases)
     return left, right
+
+
+def _solver_options(solver: str) -> dict[str, Any]:
+    options: dict[str, Any] = {"verbose": False}
+    if solver == "MOSEK":
+        options.update(
+            mosek_params={
+                "MSK_IPAR_INTPNT_SOLVE_FORM": "MSK_SOLVE_DUAL",
+                "MSK_DPAR_INTPNT_CO_TOL_DFEAS": 1e-10,
+                "MSK_DPAR_INTPNT_CO_TOL_INFEAS": 1e-10,
+                "MSK_DPAR_INTPNT_CO_TOL_MU_RED": 1e-10,
+                "MSK_DPAR_INTPNT_CO_TOL_PFEAS": 1e-10,
+                "MSK_DPAR_INTPNT_CO_TOL_REL_GAP": 1e-10,
+            }
+        )
+    elif solver == "CLARABEL":
+        options.update(
+            tol_gap_abs=1e-10,
+            tol_gap_rel=1e-10,
+            tol_feas=1e-10,
+            max_iter=1_000,
+        )
+    elif solver == "SCS":
+        options.update(eps=1e-8, max_iters=100_000)
+    return options
+
+
+def _solve_with_fallback(
+    problem: Any,
+    gauge_variable: Any,
+    cp: Any,
+    solver: str | None,
+) -> _SolverResult:
+    automatic = solver is None
+    if automatic:
+        installed = set(cp.installed_solvers())
+        candidates = [name for name in _DEFAULT_SOLVER_ORDER if name in installed]
+        if not candidates:
+            raise RealizationError(
+                "none of the supported SDP solvers is installed "
+                f"({_DEFAULT_SOLVER_ORDER})"
+            )
+    else:
+        candidates = [solver]
+
+    failures: list[str] = []
+    inaccurate: _SolverResult | None = None
+    for candidate in candidates:
+        try:
+            with py_warnings.catch_warnings():
+                py_warnings.filterwarnings(
+                    "ignore",
+                    message="Initializing a Constant with a nested list.*",
+                    category=UserWarning,
+                )
+                py_warnings.filterwarnings(
+                    "ignore",
+                    message="Solution may be inaccurate.*",
+                    category=UserWarning,
+                )
+                problem.solve(solver=candidate, **_solver_options(candidate))
+        except Exception as error:  # CVXPY normalizes backend exceptions poorly.
+            failure = f"{candidate}: {type(error).__name__}: {error}"
+            if not automatic:
+                raise RealizationError(f"the SDP solver failed ({failure})") from error
+            failures.append(failure)
+            continue
+
+        if gauge_variable.value is None or problem.status not in {
+            cp.OPTIMAL,
+            cp.OPTIMAL_INACCURATE,
+        }:
+            failure = f"{candidate}: status {problem.status}"
+            if not automatic:
+                raise RealizationError(
+                    f"the SDP problem did not converge ({failure})"
+                )
+            failures.append(failure)
+            continue
+
+        result = _SolverResult(
+            solver=candidate,
+            status=problem.status,
+            objective=float(problem.value),
+            gauge=np.asarray(gauge_variable.value, dtype=np.complex128).copy(),
+            failed_attempts=tuple(failures),
+        )
+        if problem.status == cp.OPTIMAL:
+            return result
+        if inaccurate is None:
+            inaccurate = result
+        failures.append(f"{candidate}: status {problem.status}")
+
+    if inaccurate is not None:
+        return _SolverResult(
+            solver=inaccurate.solver,
+            status=inaccurate.status,
+            objective=inaccurate.objective,
+            gauge=inaccurate.gauge,
+            failed_attempts=tuple(failures),
+        )
+    joined = "; ".join(failures)
+    raise RealizationError(f"all automatic SDP solvers failed ({joined})")
 
 
 def realize_sdp(
@@ -77,41 +194,9 @@ def realize_sdp(
         dissipation_lmi >> 0,
     ]
     problem = cp.Problem(cp.Minimize(objective), constraints)
-    if solver is None:
-        installed = set(cp.installed_solvers())
-        for candidate in ("MOSEK", "CLARABEL", "SCS"):
-            if candidate in installed:
-                solver = candidate
-                break
-    solve_options: dict[str, float | int | bool] = {"verbose": False}
-    if solver == "CLARABEL":
-        solve_options.update(
-            tol_gap_abs=1e-10,
-            tol_gap_rel=1e-10,
-            tol_feas=1e-10,
-            max_iter=1_000,
-        )
-    elif solver == "SCS":
-        solve_options.update(eps=1e-8, max_iters=100_000)
-    try:
-        with py_warnings.catch_warnings():
-            py_warnings.filterwarnings(
-                "ignore",
-                message="Initializing a Constant with a nested list.*",
-                category=UserWarning,
-            )
-            py_warnings.filterwarnings(
-                "ignore",
-                message="Solution may be inaccurate.*",
-                category=UserWarning,
-            )
-            problem.solve(solver=solver, **solve_options)
-    except Exception as error:  # CVXPY normalizes backend-specific exceptions poorly.
-        raise RealizationError(f"the SDP solver failed: {error}") from error
-    if problem.status not in {cp.OPTIMAL, cp.OPTIMAL_INACCURATE} or y.value is None:
-        raise RealizationError(f"the SDP problem did not converge ({problem.status})")
+    solution = _solve_with_fallback(problem, y, cp, solver)
 
-    y_value = np.asarray(y.value, dtype=np.complex128)
+    y_value = solution.gauge
     y_value = (y_value + y_value.conj().T) / 2.0
     eigenvalues, eigenvectors = np.linalg.eigh(y_value)
     y_scale = max(1.0, float(np.max(np.abs(eigenvalues))))
@@ -158,8 +243,13 @@ def realize_sdp(
         / max(np.linalg.norm(target), np.finfo(float).tiny)
     )
     warnings: list[str] = []
-    if problem.status == cp.OPTIMAL_INACCURATE:
+    if solution.status == cp.OPTIMAL_INACCURATE:
         warnings.append("CVXPY reported an inaccurate optimum")
+    if solution.failed_attempts:
+        warnings.append(
+            "automatic SDP solver fallback was used after: "
+            + "; ".join(solution.failed_attempts)
+        )
     if equality_residual > 1e-6:
         warnings.append(
             "the exponential fit was projected to a nearby physical correlation"
@@ -172,9 +262,10 @@ def realize_sdp(
         conversion_residual=max(equality_residual, model_residual),
         warnings=tuple(warnings),
         details={
-            "solver": solver,
-            "solver_status": problem.status,
-            "solver_objective": float(problem.value),
+            "solver": solution.solver,
+            "solver_status": solution.status,
+            "solver_objective": solution.objective,
+            "solver_failed_attempts": solution.failed_attempts,
             "gauge_eigenvalues": eigenvalues,
             "equality_residual": equality_residual,
             "model_residual": model_residual,
