@@ -97,6 +97,26 @@ def test_sdp_route_round_trip():
     assert result.conversion_residual < 2e-6
 
 
+@pytest.mark.parametrize("solver", ["CLARABEL", "SCS"])
+@pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
+def test_open_source_sdp_solvers_round_trip(solver):
+    import cvxpy as cp
+
+    if solver not in cp.installed_solvers():
+        pytest.skip(f"{solver} is not installed")
+    exponential = make_physical_exponential()
+
+    result = realize_sdp(exponential, solver=solver)
+    times = np.linspace(0.0, 8.0, 161)
+    relative = np.linalg.norm(
+        result.model.evaluate(times) - exponential.evaluate(times)
+    ) / np.linalg.norm(exponential.evaluate(times))
+
+    assert result.details["solver"] == solver
+    assert relative < 2e-6
+    assert result.conversion_residual < 2e-6
+
+
 @pytest.mark.skipif(not cvxpy_available(), reason="CVXPY is not installed")
 def test_sdp_route_projects_an_unphysical_fit():
     exponential = ExponentialFit(

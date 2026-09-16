@@ -1,5 +1,7 @@
 # RealTimeBath
 
+[![CI](https://github.com/Hertz4/RealTimeBath/actions/workflows/ci.yml/badge.svg)](https://github.com/Hertz4/RealTimeBath/actions/workflows/ci.yml)
+
 `realtimebath` fits a sampled scalar real-time bath correlation with a
 finite, physical set of coupled Lindblad pseudomodes:
 
